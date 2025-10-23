@@ -1,9 +1,10 @@
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import update
 from sqlalchemy.orm import selectinload
-from database.models import UniversityGroup, TelegramChat, ClassLink, PrivateSubscriber
+from database.models import UniversityGroup, TelegramChat, PrivateSubscriber
 from typing import Optional, List
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import SQLAlchemyError
 
 
 async def create_university_group(
@@ -180,6 +181,16 @@ async def get_telegram_chats_by_admin(db: AsyncSession, admin_user_id: int) -> L
         select(TelegramChat).where(TelegramChat.admin_user_id == admin_user_id)
     )
     return result.scalars().all()
+
+
+async def delete_telegram_chat(db: AsyncSession, chat: TelegramChat) -> None:
+    """Видалити чат"""
+    try:
+        await db.delete(chat)
+        await db.commit()
+    except SQLAlchemyError:
+        await db.rollback()
+        raise
 
 
 async def is_group_admin(db: AsyncSession, chat_id: int, user_id: int) -> bool:

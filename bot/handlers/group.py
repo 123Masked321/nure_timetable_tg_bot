@@ -1,11 +1,12 @@
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message, ChatMemberUpdated
+from sqlalchemy.exc import SQLAlchemyError
 from database.database import AsyncSessionLocal
 from database.crud import (
     create_university_group, create_telegram_chat, get_telegram_chat_by_chat_id, get_university_group_by_id,
     cleanup_unused_university_groups, switch_telegram_chat_group, get_university_group_by_cist_id,
-    add_private_subscriber, remove_private_subscriber
+    add_private_subscriber, remove_private_subscriber, delete_telegram_chat
 )
 from services.schedule_api import ScheduleAPI
 from services.schedule_sync import initial_sync_on_register, load_subjects_for_group
@@ -72,7 +73,6 @@ async def cmd_register(message: Message):
 
     async with AsyncSessionLocal() as db:
         try:
-            # Перевіряємо, чи вже зареєстрований цей Telegram чат
             existing_chat = await get_telegram_chat_by_chat_id(db, chat_id)
             if existing_chat:
                 uni_group = await get_university_group_by_id(db, existing_chat.university_group_id)
@@ -400,6 +400,32 @@ async def cmd_stop_private(message: Message):
             await message.answer("🛑 Ти більше не отримуєш особисті сповіщення.")
         else:
             await message.answer("ℹ️ Ти не був підписаний на сповіщення.")
+
+
+@router.message(Command("delete_chat"), IsGroupAdmin())
+async def cmd_delete_chat(message: Message):
+    if message.chat.type == "private":
+        await message.answer("❌ Ця команда працює лише в групових чатах")
+        return
+
+    async with AsyncSessionLocal() as db:
+        telegram_chat = await get_telegram_chat_by_chat_id(db, message.chat.id)
+        if not telegram_chat:
+            await message.answer("❌ Група не зареєстрована. Використайте /register")
+            return
+
+        try:
+            await delete_telegram_chat(db, telegram_chat)
+        except SQLAlchemyError as e:
+            await message.answer("❌ Помилка: група не була видалена.")
+            logger.exception(f"Помилка при видаленні чата {message.chat.id}: {e}")
+        else:
+            await message.answer(
+                "✅ Група була видалена. Її може зареєструвати інший адмін або бот може бути видалений з групи."
+            )
+
+
+
 
 
 @router.my_chat_member()

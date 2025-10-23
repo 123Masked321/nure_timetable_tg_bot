@@ -41,6 +41,7 @@ group_commands = [
     BotCommand(command="change_group", description="Змінити групу"),
     BotCommand(command="sync_schedule", description="Синхронізувати розклад"),
     BotCommand(command="info", description="Інформація про групу"),
+    BotCommand(command="delete_chat", description="Видалити інформацію про чат"),
 ]
 
 
