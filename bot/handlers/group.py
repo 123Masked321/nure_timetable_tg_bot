@@ -425,9 +425,6 @@ async def cmd_delete_chat(message: Message):
             )
 
 
-
-
-
 @router.my_chat_member()
 async def on_bot_added(event: ChatMemberUpdated):
     if event.new_chat_member.status in ["member", "administrator"]:
