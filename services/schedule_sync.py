@@ -77,10 +77,10 @@ async def sync_group_schedule_to_db(university_group: UniversityGroup) -> bool:
                 )
 
             if not events_raw:
-                logger.error(f"Не вдалося отримати розклад з CIST для {university_group.name}")
+                logger.error(f"Не вдалося отримати розклад з API для {university_group.name}")
                 return False
 
-            events = api_client.parse_schedule(events_raw)
+            events = await api_client.parse_schedule(events_raw)
 
             await clear_group_schedule(db, university_group.id)
             changes_count = 0
@@ -106,7 +106,6 @@ async def sync_group_schedule_to_db(university_group: UniversityGroup) -> bool:
                     lector=event.get("teacher"),
                 )
                 changes_count += 1
-
 
             await delete_old_schedule(db, university_group.id, date.today())
             logger.info(f"Синхронізація завершена. Додано {changes_count} пар.")
